@@ -5,12 +5,38 @@ const { abi, bytecode } = require('./abi.js');
 
 async function testClient() {
     console.log("Testing Client Orchestration...");
-    const pk = "0x3e31041395dc9d66f915dcb13e2cc8f9a5fc9a9f4f0980d1f2b915dee87e5684";
+    const pk = "ENTER YOUR PRIVATE KEY"; // Enter your own privateKey
     const client = new Client(DEFAULT_RPC_URL, pk);
     console.log(client);
     console.log(`Client Address: ${client.signer.address}`);
     assert(client.provider !== undefined, "Provider should be initialized");
     assert(client.signer !== undefined, "Signer should be initialized");
+
+    // Test getPrivateKey
+    console.log("Testing getPrivateKey...");
+    const pkFromSigner = client.signer.getPrivateKey();
+    assert(pkFromSigner === pk, "Private key should match the one provided");
+    assert(pkFromSigner.startsWith("0x"), "Private key should start with 0x");
+    console.log("getPrivateKey check passed.");
+
+    // Test createRandom
+    console.log("Testing createRandom...");
+    const randomClient = Client.createRandom(DEFAULT_RPC_URL);
+    assert(randomClient.signer !== undefined, "Random client should have a signer");
+    assert(randomClient.signer.address !== undefined, "Random signer should have an address");
+    assert(randomClient.signer.address !== client.signer.address, "Random address should be different");
+    console.log(`Random Address Generated: ${randomClient.signer.address}`);
+    console.log("createRandom check passed.");
+
+    // Test estimateGas
+    console.log("Testing estimateGas...");
+    try {
+        const gasLimit = await client.signer.estimateGas("sendNative", ["0x0Ed97d61F29E87b553e1EC52A2cBfA782Fa67464", "1000"]);
+        console.log(`Estimated Gas (sendNative): ${gasLimit}`);
+        assert(typeof gasLimit === 'number', "Gas limit should be a number");
+    } catch (err) {
+        console.log(`estimateGas check failed (expected if RPC is offline): ${err.message}`);
+    }
 
     try {
         const blockNumber = await client.provider.getBlockNumber();

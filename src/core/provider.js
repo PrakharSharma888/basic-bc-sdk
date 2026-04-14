@@ -41,6 +41,20 @@ class Provider {
             throw new ProviderError(`Error while waiting for transaction ${hash}: ${err.message}`);
         }
     }
+
+    /**
+     * Estimates gas for a transaction.
+     * @param {Object} transaction - The transaction object.
+     * @returns {Promise<number>} The estimated gas amount.
+     */
+    async estimateGas(transaction) {
+        try {
+            const gas = await this.ethersProvider.estimateGas(transaction);
+            return Number(gas);
+        } catch (err) {
+            throw new ProviderError(`Failed to estimate gas: ${err.message}`);
+        }
+    }
 }
 
 module.exports = Provider;

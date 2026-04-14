@@ -7,9 +7,10 @@ A modular and lightweight blockchain development kit for interacting with any MS
 - [Installation](#installation)
 - [Quick Start](#quick-start)
   - [1. Initialize the Client](#1-initialize-the-client)
-  - [2. Check Account Balance (via Provider)](#2-check-account-balance-via-provider)
-  - [3. Send Transactions (via Signer)](#3-send-transactions-via-signer)
-  - [4. Deploy Contract & Get Address](#4-deploy-contract--get-address)
+  - [2. Generate a Random Wallet](#2-generate-a-random-wallet)
+  - [3. Check Account Balance (via Provider)](#3-check-account-balance-via-provider)
+  - [4. Estimate Gas & Send Transactions](#4-estimate-gas--send-transactions)
+  - [5. Deploy Contract & Get Address](#5-deploy-contract--get-address)
 - [Core Modules](#core-modules)
   - [1. Client](#1-client)
   - [2. Provider](#2-provider-read-only)
@@ -46,7 +47,16 @@ const privateKey = '0x...';
 const client = new Client(rpcUrl, privateKey);
 ```
 
-### 2. Check Account Balance (via Provider)
+### 2. Generate a Random Wallet
+
+```javascript
+// Creates a new client with a fresh random private key
+const client = Client.createRandom(rpcUrl);
+console.log(`Generated Address: ${client.signer.address}`);
+console.log(`Private Key: ${client.signer.getPrivateKey()}`);
+```
+
+### 3. Check Account Balance (via Provider)
 
 ```javascript
 async function checkBalance() {
@@ -57,20 +67,24 @@ async function checkBalance() {
 }
 ```
 
-### 3. Send Transactions (via Signer)
+### 4. Estimate Gas & Send Transactions
 
 ```javascript
 async function sendTx() {
     const toAddress = '0x...';
     const amount = '1000000000000000000'; // 1 TOKEN
     
-    // Using the convenient sendNative helper
+    // 1. Estimate gas first
+    const gasLimit = await client.signer.estimateGas("sendNative", [toAddress, amount]);
+    console.log(`Estimated Gas: ${gasLimit}`);
+
+    // 2. Send the transaction
     const txHash = await client.signer.sendNative(toAddress, amount);
     console.log(`Transaction Hash: ${txHash}`);
 }
 ```
 
-### 4. Deploy Contract & Get Address
+### 5. Deploy Contract & Get Address
 
 ```javascript
 async function deployContract() {
@@ -93,7 +107,8 @@ async function deployContract() {
 ## Core Modules
 
 ### 1. `Client`
-The root container.
+The root container and main entry point.
+- `static createRandom(rpcUrl)`: Returns a new Client instance with a random signer.
 - `provider`: Instance of `Provider`.
 - `signer`: Instance of `Signer` (if privateKey provided).
 
@@ -103,9 +118,13 @@ Accessed via `client.provider`.
 - `getBalance(address)`: Fetches raw balance.
 - `getTransactionReceipt(hash)`: Fetches the receipt of a mined txn.
 - `waitForTransaction(hash)`: Waits for a txn to be mined.
+- `estimateGas(txObject)`: Estimates gas for a raw transaction object.
 
 ### 3. `Signer` (Identity & Writing)
 Accessed via `client.signer`.
+- `static createRandom(provider)`: Generates a new random Signer attached to a provider.
+- `getPrivateKey()`: Returns the private key of the current wallet.
+- `estimateGas(method, args)`: Estimates gas for Signer methods (`sendNative`, `sendToken`, `deploy`).
 - `sendTransaction(tx)`: Signs and broadcasts any transaction.
 - `sendNative(to, amount)`: Shortcut for sending native tokens.
 - `sendToken(tokenAddress, to, amount)`: Sends ERC20 tokens.

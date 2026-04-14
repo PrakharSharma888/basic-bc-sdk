@@ -15,6 +15,24 @@ class Signer {
         }
     }
 
+    /**
+     * Creates a new random Signer attached to the given provider.
+     * @param {Provider} provider - The provider instance.
+     * @returns {Signer} A new Signer instance with a random private key.
+     */
+    static createRandom(provider) {
+        const wallet = ethers.Wallet.createRandom();
+        return new Signer(wallet.privateKey, provider);
+    }
+
+    /**
+     * Returns the private key of the current wallet.
+     * @returns {string} The private key.
+     */
+    getPrivateKey() {
+        return this.ethersWallet.privateKey;
+    }
+
     async sendTransaction(tx) {
         try {
             const response = await this.ethersWallet.sendTransaction(tx);
@@ -61,6 +79,38 @@ class Signer {
 
     async getAddress() {
         return this.address;
+    }
+
+    /**
+     * Estimates gas for a transaction based on the method and arguments.
+     * @param {string} method - The action to perform ('sendNative', 'sendToken', 'deploy').
+     * @param {any[]} args - The arguments for the specified method.
+     * @returns {Promise<number>} The estimated gas amount.
+     */
+    async estimateGas(method, args) {
+        try {
+            let tx = {};
+            if (method === "sendNative") {
+                const [to, amount] = args;
+                tx = { to, value: amount };
+            } else if (method === "sendToken") {
+                const [tokenAddress, to, amount] = args;
+                const data = `0xa9059cbb${to.replace('0x', '').padStart(64, '0')}${BigInt(amount).toString(16).padStart(64, '0')}`;
+                tx = { to: tokenAddress, data };
+            } else if (method === "deploy") {
+                const [abi, bytecode, constructorArgs = []] = args;
+                const factory = new ethers.ContractFactory(abi, bytecode, this.ethersWallet);
+                const deployTx = await factory.getDeployTransaction(...constructorArgs);
+                tx = deployTx;
+            } else {
+                throw new Error(`Unsupported method for gas estimation: ${method}`);
+            }
+
+            const gas = await this.ethersWallet.estimateGas(tx);
+            return Number(gas);
+        } catch (err) {
+            throw new TransactionError(`Gas estimation failed: ${err.message}`);
+        }
     }
 }
 
